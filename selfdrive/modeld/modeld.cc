@@ -8,9 +8,9 @@
 #include "common/clutil.h"
 #include "common/util.h"
 #include "common/params.h"
-
+#include "selfdrive/hardware/hw.h"
 #include "models/driving.h"
-#include "messaging.hpp"
+#include "messaging.h"
 
 ExitHandler do_exit;
 // globals
@@ -40,8 +40,8 @@ void calibration_thread(bool wide_camera) {
   const mat3 yuv_transform = get_model_yuv_transform();
 
   while (!do_exit) {
-    if (sm.update(100) > 0){
-
+    sm.update(100);
+    if(sm.updated("liveCalibration")){
       auto extrinsic_matrix = sm["liveCalibration"].getLiveCalibration().getExtrinsicMatrix();
       Eigen::Matrix<float, 3, 4> extrinsic_matrix_eigen;
       for (int i = 0; i < 4*3; i++){
@@ -90,11 +90,10 @@ void run_model(ModelState &model, VisionIpcClient &vipc_client) {
     const bool run_model_this_iter = live_calib_seen;
     transform_lock.unlock();
 
-    if (sm.update(0) > 0) {
-      // TODO: path planner timeout?
-      desire = ((int)sm["lateralPlan"].getLateralPlan().getDesire());
-      frame_id = sm["roadCameraState"].getRoadCameraState().getFrameId();
-    }
+    // TODO: path planner timeout?
+    sm.update(0);
+    desire = ((int)sm["lateralPlan"].getLateralPlan().getDesire());
+    frame_id = sm["roadCameraState"].getRoadCameraState().getFrameId();
 
     if (run_model_this_iter) {
       run_count++;
@@ -134,17 +133,12 @@ void run_model(ModelState &model, VisionIpcClient &vipc_client) {
 int main(int argc, char **argv) {
   set_realtime_priority(54);
 
-#ifdef QCOM
-  set_core_affinity(2);
-#elif QCOM2
-  set_core_affinity(7);
-#endif
-
-  bool wide_camera = false;
-
-#ifdef QCOM2
-  wide_camera = Params().getBool("EnableWideCamera");
-#endif
+  if (Hardware::EON()) {
+    set_core_affinity(2);
+  } else if (Hardware::TICI()) {
+    set_core_affinity(7);  
+  }
+  bool wide_camera = Hardware::TICI() ? Params().getBool("EnableWideCamera") : false;
 
   // start calibration thread
   std::thread thread = std::thread(calibration_thread, wide_camera);

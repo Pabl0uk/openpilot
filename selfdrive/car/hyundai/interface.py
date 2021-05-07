@@ -237,7 +237,6 @@ class CarInterface(CarInterfaceBase):
                                                                          tire_stiffness_factor=tire_stiffness_factor)
 
     ret.enableCamera = True
-    ret.enableBsm = 0x58b in fingerprint[0]
 
     return ret
 

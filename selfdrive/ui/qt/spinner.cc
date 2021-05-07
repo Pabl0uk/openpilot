@@ -7,12 +7,10 @@
 #include <QGridLayout>
 #include <QApplication>
 #include <QPainter>
+#include "spinner.hpp"
+#include "qt_window.hpp"
 
-#include "spinner.h"
-#include "qt_window.h"
-#include "selfdrive/hardware/hw.h"
-
-TrackWidget::TrackWidget(QWidget *parent) : QWidget(parent) {
+TrackWidget::TrackWidget(QWidget *parent) : QOpenGLWidget(parent) {
   setFixedSize(spinner_size);
   setAutoFillBackground(false);
 
@@ -94,7 +92,7 @@ Spinner::Spinner(QWidget *parent) {
   )");
 
   notifier = new QSocketNotifier(fileno(stdin), QSocketNotifier::Read);
-  QObject::connect(notifier, &QSocketNotifier::activated, this, &Spinner::update);
+  QObject::connect(notifier, SIGNAL(activated(int)), this, SLOT(update(int)));
 };
 
 void Spinner::update(int n) {
@@ -122,9 +120,6 @@ int main(int argc, char *argv[]) {
   fmt.setRenderableType(QSurfaceFormat::OpenGLES);
 #endif
   QSurfaceFormat::setDefaultFormat(fmt);
-
-  Hardware::set_display_power(true);
-  Hardware::set_brightness(65);
 
   QApplication a(argc, argv);
   Spinner spinner;

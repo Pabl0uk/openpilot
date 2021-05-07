@@ -2,7 +2,6 @@
 import struct
 import traceback
 from typing import Any
-from collections import defaultdict
 
 from tqdm import tqdm
 
@@ -137,82 +136,30 @@ def chunks(l, n=128):
     yield l[i:i + n]
 
 
-def build_fw_dict(fw_versions):
+def match_fw_to_car(fw_versions):
+  candidates = FW_VERSIONS
+  invalid = []
+
   fw_versions_dict = {}
   for fw in fw_versions:
     addr = fw.address
     sub_addr = fw.subAddress if fw.subAddress != 0 else None
     fw_versions_dict[(addr, sub_addr)] = fw.fwVersion
-  return fw_versions_dict
-
-
-def match_fw_to_car_fuzzy(fw_versions_dict, log=True, exclude=None):
-  """Do a fuzzy FW match. This function will return a match, and the number of firmware version
-  that were matched uniquely to that specific car. If multiple ECUs uniquely match to different cars
-  the match is rejected."""
-
-  # These ECUs are known to be shared between models (EPS only between hybrid/ICE version)
-  # Getting this exactly right isn't crucial, but excluding camera and radar makes it almost
-  # impossible to get 3 matching versions, even if two models with shared parts are released at the same
-  # time and only one is in our database.
-  exclude_types = [Ecu.fwdCamera, Ecu.fwdRadar, Ecu.eps]
-
-  # Build lookup table from (addr, subaddr, fw) to list of candidate cars
-  all_fw_versions = defaultdict(list)
-  for candidate, fw_by_addr in FW_VERSIONS.items():
-    if candidate == exclude:
-      continue
-
-    for addr, fws in fw_by_addr.items():
-      if addr[0] in exclude_types:
-        continue
-      for f in fws:
-        all_fw_versions[(addr[1], addr[2], f)].append(candidate)
-
-  match_count = 0
-  candidate = None
-  for addr, version in fw_versions_dict.items():
-    # All cars that have this FW response on the specified address
-    candidates = all_fw_versions[(addr[0], addr[1], version)]
-
-    if len(candidates) == 1:
-      match_count += 1
-      if candidate is None:
-        candidate = candidates[0]
-      # We uniquely matched two different cars. No fuzzy match possible
-      elif candidate != candidates[0]:
-        return set()
-
-  if match_count >= 2:
-    if log:
-      cloudlog.error(f"Fingerprinted {candidate} using fuzzy match. {match_count} matching ECUs")
-    return set([candidate])
-  else:
-    return set()
-
-
-def match_fw_to_car_exact(fw_versions_dict):
-  """Do an exact FW match. Returns all cars that match the given
-  FW versions for a list of "essential" ECUs. If an ECU is not considered
-  essential the FW version can be missing to get a fingerprint, but if it's present it
-  needs to match the database."""
-  invalid = []
-  candidates = FW_VERSIONS
 
   for candidate, fws in candidates.items():
     for ecu, expected_versions in fws.items():
       ecu_type = ecu[0]
       addr = ecu[1:]
       found_version = fw_versions_dict.get(addr, None)
-      ESSENTIAL_ECUS = [Ecu.engine, Ecu.eps, Ecu.esp, Ecu.fwdRadar, Ecu.fwdCamera, Ecu.vsa]
+      ESSENTIAL_ECUS = [Ecu.engine, Ecu.eps, Ecu.esp, Ecu.fwdRadar, Ecu.fwdCamera, Ecu.vsa, Ecu.electricBrakeBooster]
       if ecu_type == Ecu.esp and candidate in [TOYOTA.RAV4, TOYOTA.COROLLA, TOYOTA.HIGHLANDER] and found_version is None:
         continue
 
-      # On some Toyota models, the engine can show on two different addresses
+      # TODO: on some toyota, the engine can show on two different addresses
       if ecu_type == Ecu.engine and candidate in [TOYOTA.COROLLA_TSS2, TOYOTA.CHR, TOYOTA.LEXUS_IS, TOYOTA.AVALON] and found_version is None:
         continue
 
-      # Ignore non essential ecus
+      # ignore non essential ecus
       if ecu_type not in ESSENTIAL_ECUS and found_version is None:
         continue
 
@@ -221,21 +168,6 @@ def match_fw_to_car_exact(fw_versions_dict):
         break
 
   return set(candidates.keys()) - set(invalid)
-
-
-def match_fw_to_car(fw_versions, allow_fuzzy=True):
-  fw_versions_dict = build_fw_dict(fw_versions)
-  matches = match_fw_to_car_exact(fw_versions_dict)
-
-  exact_match = True
-  if allow_fuzzy and len(matches) == 0:
-    matches = match_fw_to_car_fuzzy(fw_versions_dict)
-
-    # Fuzzy match found
-    if len(matches) == 1:
-      exact_match = False
-
-  return exact_match, matches
 
 
 def get_fw_versions(logcan, sendcan, bus, extra=None, timeout=0.1, debug=False, progress=False):
@@ -332,7 +264,7 @@ if __name__ == "__main__":
 
   t = time.time()
   fw_vers = get_fw_versions(logcan, sendcan, 1, extra=extra, debug=args.debug, progress=True)
-  _, candidates = match_fw_to_car(fw_vers)
+  candidates = match_fw_to_car(fw_vers)
 
   print()
   print("Found FW versions")

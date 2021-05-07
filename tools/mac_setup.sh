@@ -53,8 +53,7 @@ if [ -z "$OPENPILOT_ENV" ] && [ -n "$RC_FILE" ] && [ -z "$CI" ]; then
   OP_DIR=$(git rev-parse --show-toplevel)
   echo "export PATH=\"\$PATH:$HOME/.cargo/bin\"" >> $RC_FILE
   echo "source $OP_DIR/tools/openpilot_env.sh" >> $RC_FILE
-  export PATH="$PATH:\"\$HOME/.cargo/bin\""
-  source "$OP_DIR/tools/openpilot_env.sh"
+  source $RC_FILE
   echo "Added openpilot_env to RC file: $RC_FILE"
 fi
 
@@ -65,8 +64,3 @@ eval "$(pyenv init -)"
 
 pip install pipenv==2020.8.13
 pipenv install --system --deploy
-
-echo
-echo "----   FINISH OPENPILOT SETUP   ----"
-echo "Configure your active shell env by running:"
-echo "source $RC_FILE"

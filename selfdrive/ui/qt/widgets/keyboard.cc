@@ -5,7 +5,7 @@
 #include <QButtonGroup>
 #include <QStackedLayout>
 
-#include "keyboard.h"
+#include "keyboard.hpp"
 
 const int DEFAULT_STRETCH = 1;
 const int SPACEBAR_STRETCH = 3;

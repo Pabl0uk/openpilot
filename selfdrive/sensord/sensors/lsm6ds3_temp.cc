@@ -2,7 +2,7 @@
 #include "common/swaglog.h"
 #include "common/timing.h"
 
-#include "lsm6ds3_temp.h"
+#include "lsm6ds3_temp.hpp"
 
 
 LSM6DS3_Temp::LSM6DS3_Temp(I2CBus *bus) : I2CSensor(bus) {}

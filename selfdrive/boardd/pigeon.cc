@@ -64,8 +64,7 @@ bool Pigeon::send_with_ack(std::string cmd){
 }
 
 void Pigeon::init() {
-  for (int i = 0; i < 10; i++){
-    if (do_exit) return;
+  while (!do_exit){
     LOGW("panda GPS start");
 
     // power off pigeon
@@ -107,10 +106,10 @@ void Pigeon::init() {
     if (!send_with_ack("\xB5\x62\x06\x01\x03\x00\x0A\x09\x01\x1E\x70"s)) continue;
     if (!send_with_ack("\xB5\x62\x06\x01\x03\x00\x0A\x0B\x01\x20\x74"s)) continue;
 
-    LOGW("panda GPS on");
-    return;
+    break;
   }
-  LOGE("failed to initialize panda GPS");
+
+  LOGW("panda GPS on");
 }
 
 void PandaPigeon::connect(Panda * p) {

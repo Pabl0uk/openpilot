@@ -1,5 +1,5 @@
 #include <QScrollBar>
-#include "scrollview.h"
+#include "scrollview.hpp"
 
 ScrollView::ScrollView(QWidget *w, QWidget *parent) : QScrollArea(parent){
   setWidget(w);

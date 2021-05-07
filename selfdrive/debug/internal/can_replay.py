@@ -9,6 +9,7 @@ os.environ['FILEREADER_CACHE'] = '1'
 
 from common.realtime import config_realtime_process, Ratekeeper
 from selfdrive.boardd.boardd import can_capnp_to_can_list
+from selfdrive.pandad import set_panda_power
 from tools.lib.logreader import LogReader
 
 from panda import Panda
@@ -77,6 +78,7 @@ def connect():
     time.sleep(1)
 
 if __name__ == "__main__":
+  set_panda_power(False)
   time.sleep(1)
 
   if "FLASH" in os.environ and PandaJungle is not None:

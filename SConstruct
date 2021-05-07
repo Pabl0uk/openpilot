@@ -105,22 +105,17 @@ else:
   cpppath = []
 
   if arch == "Darwin":
-    yuv_dir = "mac" if real_arch != "arm64" else "mac_arm64"
     libpath = [
-      f"#phonelibs/libyuv/{yuv_dir}/lib",
+      "#phonelibs/libyuv/mac/lib",
+      "#cereal",
+      "#selfdrive/common",
       "/usr/local/lib",
-      "/opt/homebrew/lib",
       "/usr/local/opt/openssl/lib",
-      "/opt/homebrew/opt/openssl/lib",
       "/System/Library/Frameworks/OpenGL.framework/Libraries",
     ]
     cflags += ["-DGL_SILENCE_DEPRECATION"]
     cxxflags += ["-DGL_SILENCE_DEPRECATION"]
-    cpppath += [
-      "/opt/homebrew/include",
-      "/usr/local/opt/openssl/include",
-      "/opt/homebrew/opt/openssl/include"
-    ]
+    cpppath += ["/usr/local/opt/openssl/include"]
   else:
     libpath = [
       "#phonelibs/snpe/x86_64-linux-clang",
@@ -284,10 +279,7 @@ if arch != "aarch64":
 
 qt_libs = []
 if arch == "Darwin":
-  if real_arch == "arm64":
-    qt_env['QTDIR'] = "/opt/homebrew/opt/qt@5"
-  else:
-    qt_env['QTDIR'] = "/usr/local/opt/qt@5"
+  qt_env['QTDIR'] = "/usr/local/opt/qt@5"
   qt_dirs = [
     os.path.join(qt_env['QTDIR'], "include"),
   ]
@@ -374,19 +366,19 @@ Export('common', 'gpucommon', 'visionipc')
 rednose_config = {
   'generated_folder': '#selfdrive/locationd/models/generated',
   'to_build': {
-    'live': ('#selfdrive/locationd/models/live_kf.py', True, ['live_kf_constants.h']),
-    'car': ('#selfdrive/locationd/models/car_kf.py', True, []),
+    'live': ('#selfdrive/locationd/models/live_kf.py', True),
+    'car': ('#selfdrive/locationd/models/car_kf.py', True),
   },
 }
 
 if arch != "aarch64":
   rednose_config['to_build'].update({
-    'gnss': ('#selfdrive/locationd/models/gnss_kf.py', True, []),
-    'loc_4': ('#selfdrive/locationd/models/loc_kf.py', True, []),
-    'pos_computer_4': ('#rednose/helpers/lst_sq_computer.py', False, []),
-    'pos_computer_5': ('#rednose/helpers/lst_sq_computer.py', False, []),
-    'feature_handler_5': ('#rednose/helpers/feature_handler.py', False, []),
-    'lane': ('#xx/pipeline/lib/ekf/lane_kf.py', True, []),
+    'gnss': ('#selfdrive/locationd/models/gnss_kf.py', True),
+    'loc_4': ('#selfdrive/locationd/models/loc_kf.py', True),
+    'pos_computer_4': ('#rednose/helpers/lst_sq_computer.py', False),
+    'pos_computer_5': ('#rednose/helpers/lst_sq_computer.py', False),
+    'feature_handler_5': ('#rednose/helpers/feature_handler.py', False),
+    'lane': ('#xx/pipeline/lib/ekf/lane_kf.py', True),
   })
 
 Export('rednose_config')
@@ -424,6 +416,9 @@ SConscript(['selfdrive/ui/SConscript'])
 
 if arch != "Darwin":
   SConscript(['selfdrive/logcatd/SConscript'])
+
+if real_arch == "x86_64":
+  SConscript(['tools/nui/SConscript'])
 
 external_sconscript = GetOption('external_sconscript')
 if external_sconscript:

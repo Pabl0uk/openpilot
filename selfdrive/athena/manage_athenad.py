@@ -3,6 +3,7 @@
 import time
 from multiprocessing import Process
 
+import selfdrive.crash as crash
 from common.params import Params
 from selfdrive.manager.process import launcher
 from selfdrive.swaglog import cloudlog
@@ -15,6 +16,9 @@ def main():
   params = Params()
   dongle_id = params.get("DongleId").decode('utf-8')
   cloudlog.bind_global(dongle_id=dongle_id, version=version, dirty=dirty)
+  crash.bind_user(id=dongle_id)
+  crash.bind_extra(version=version, dirty=dirty)
+  crash.install()
 
   try:
     while 1:

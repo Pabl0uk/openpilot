@@ -1,8 +1,7 @@
 #include <QPushButton>
 
-#include "input.h"
-#include "qt_window.h"
-#include "selfdrive/hardware/hw.h"
+#include "input.hpp"
+#include "qt_window.hpp"
 
 InputDialog::InputDialog(const QString &prompt_text, QWidget *parent) : QDialog(parent) {
   layout = new QVBoxLayout();
@@ -26,8 +25,8 @@ InputDialog::InputDialog(const QString &prompt_text, QWidget *parent) : QDialog(
     background-color: #444444;
   )");
   header_layout->addWidget(cancel_btn, 0, Qt::AlignRight);
-  QObject::connect(cancel_btn, &QPushButton::released, this, &InputDialog::reject);
-  QObject::connect(cancel_btn, &QPushButton::released, this, &InputDialog::cancel);
+  QObject::connect(cancel_btn, SIGNAL(released()), this, SLOT(reject()));
+  QObject::connect(cancel_btn, SIGNAL(released()), this, SIGNAL(cancel()));
 
   layout->addLayout(header_layout);
 
@@ -44,7 +43,7 @@ InputDialog::InputDialog(const QString &prompt_text, QWidget *parent) : QDialog(
   layout->addWidget(line, 1, Qt::AlignTop);
 
   k = new Keyboard(this);
-  QObject::connect(k, &Keyboard::emitButton, this, &InputDialog::handleInput);
+  QObject::connect(k, SIGNAL(emitButton(const QString&)), this, SLOT(handleInput(const QString&)));
   layout->addWidget(k, 2, Qt::AlignBottom);
 
   setStyleSheet(R"(
@@ -112,6 +111,7 @@ void InputDialog::setMinLength(int length){
   minLength = length;
 }
 
+
 ConfirmationDialog::ConfirmationDialog(const QString &prompt_text, const QString &confirm_text, const QString &cancel_text,
                                        QWidget *parent):QDialog(parent) {
   setWindowFlags(Qt::Popup);
@@ -133,13 +133,13 @@ ConfirmationDialog::ConfirmationDialog(const QString &prompt_text, const QString
   if (cancel_text.length()) {
     QPushButton* cancel_btn = new QPushButton(cancel_text);
     btn_layout->addWidget(cancel_btn, 0, Qt::AlignRight);
-    QObject::connect(cancel_btn, &QPushButton::released, this, &ConfirmationDialog::reject);
+    QObject::connect(cancel_btn, SIGNAL(released()), this, SLOT(reject()));
   }
 
   if (confirm_text.length()) {
     QPushButton* confirm_btn = new QPushButton(confirm_text);
     btn_layout->addWidget(confirm_btn, 0, Qt::AlignRight);
-    QObject::connect(confirm_btn, &QPushButton::released, this, &ConfirmationDialog::accept);
+    QObject::connect(confirm_btn, SIGNAL(released()), this, SLOT(accept()));
   }
 
   setFixedSize(900, 350);
@@ -161,20 +161,20 @@ ConfirmationDialog::ConfirmationDialog(const QString &prompt_text, const QString
   setLayout(layout);
 }
 
-bool ConfirmationDialog::alert(const QString &prompt_text, QWidget *parent) {
-  ConfirmationDialog d = ConfirmationDialog(prompt_text, "Ok", "", parent);
+bool ConfirmationDialog::alert(const QString &prompt_text) {
+  ConfirmationDialog d = ConfirmationDialog(prompt_text, "Ok", "");
   return d.exec();
 }
 
-bool ConfirmationDialog::confirm(const QString &prompt_text, QWidget *parent) {
-  ConfirmationDialog d = ConfirmationDialog(prompt_text, "Ok", "Cancel", parent);
+bool ConfirmationDialog::confirm(const QString &prompt_text) {
+  ConfirmationDialog d = ConfirmationDialog(prompt_text);
   return d.exec();
 }
 
 int ConfirmationDialog::exec() {
    // TODO: make this work without fullscreen
-  if (Hardware::TICI()) {
-    setMainWindow(this);
-  }
+#ifdef QCOM2
+  setMainWindow(this);
+#endif
   return QDialog::exec();
 }

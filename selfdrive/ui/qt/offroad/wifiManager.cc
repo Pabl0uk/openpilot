@@ -5,7 +5,7 @@
 
 #include "common/params.h"
 #include "common/swaglog.h"
-#include "wifiManager.h"
+#include "wifiManager.hpp"
 
 /**
  * We are using a NetworkManager DBUS API : https://developer.gnome.org/NetworkManager/1.26/spec.html

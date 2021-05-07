@@ -850,8 +850,7 @@ static void parse_autofocus(CameraState *s, uint8_t *d) {
 }
 
 static std::optional<float> get_accel_z(SubMaster *sm) {
-  sm->update(0);
-  if(sm->updated("sensorEvents")){
+  if (sm->update(0) > 0) {
     for (auto event : (*sm)["sensorEvents"].getSensorEvents()) {
       if (event.which() == cereal::SensorEventData::ACCELERATION) {
         if (auto v = event.getAcceleration().getV(); v.size() >= 3)

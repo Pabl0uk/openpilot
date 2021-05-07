@@ -6,7 +6,7 @@ import shutil
 import stat
 import unittest
 
-from common.params import Params, ParamKeyType, UnknownKeyName, put_nonblocking
+from common.params import Params, UnknownKeyName, put_nonblocking
 
 class TestParams(unittest.TestCase):
   def setUp(self):
@@ -35,7 +35,7 @@ class TestParams(unittest.TestCase):
     self.params.put("CarParams", "test")
     self.params.put("DongleId", "cb38263377b873ee")
     assert self.params.get("CarParams") == b"test"
-    self.params.clear_all(ParamKeyType.CLEAR_ON_PANDA_DISCONNECT)
+    self.params.panda_disconnect()
     assert self.params.get("CarParams") is None
     assert self.params.get("DongleId") is not None
 
@@ -43,7 +43,7 @@ class TestParams(unittest.TestCase):
     self.params.put("CarParams", "test")
     self.params.put("DongleId", "cb38263377b873ee")
     assert self.params.get("CarParams") == b"test"
-    self.params.clear_all(ParamKeyType.CLEAR_ON_MANAGER_START)
+    self.params.manager_start()
     assert self.params.get("CarParams") is None
     assert self.params.get("DongleId") is not None
 

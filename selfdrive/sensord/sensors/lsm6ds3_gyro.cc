@@ -3,7 +3,7 @@
 #include "common/swaglog.h"
 #include "common/timing.h"
 
-#include "lsm6ds3_gyro.h"
+#include "lsm6ds3_gyro.hpp"
 
 #define DEG2RAD(x) ((x) * M_PI / 180.0)
 

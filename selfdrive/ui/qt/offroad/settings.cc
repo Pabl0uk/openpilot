@@ -4,19 +4,20 @@
 #include <cassert>
 
 #ifndef QCOM
-#include "networking.h"
+#include "networking.hpp"
 #endif
-#include "settings.h"
-#include "widgets/input.h"
-#include "widgets/toggle.h"
-#include "widgets/offroad_alerts.h"
-#include "widgets/scrollview.h"
-#include "widgets/controls.h"
-#include "widgets/ssh_keys.h"
+#include "settings.hpp"
+#include "widgets/input.hpp"
+#include "widgets/toggle.hpp"
+#include "widgets/offroad_alerts.hpp"
+#include "widgets/scrollview.hpp"
+#include "widgets/controls.hpp"
+#include "widgets/ssh_keys.hpp"
 #include "common/params.h"
 #include "common/util.h"
 #include "selfdrive/hardware/hw.h"
-#include "ui.h"
+#include "home.hpp"
+
 
 TogglesPanel::TogglesPanel(QWidget *parent) : QWidget(parent) {
   QVBoxLayout *toggles_list = new QVBoxLayout();
@@ -48,15 +49,11 @@ TogglesPanel::TogglesPanel(QWidget *parent) : QWidget(parent) {
                                   "Use features from the open source community that are not maintained or supported by comma.ai and have not been confirmed to meet the standard safety model. These features include community supported cars and community supported hardware. Be extra cautious when using these features",
                                   "../assets/offroad/icon_shell.png",
                                   this));
-
-  if (!Hardware::TICI()) {
-    toggles.append(new ParamControl("IsUploadRawEnabled",
-                                    "Upload Raw Logs",
-                                    "Upload full logs and full resolution video by default while on WiFi. If not enabled, individual logs can be marked for upload at my.comma.ai/useradmin.",
-                                    "../assets/offroad/icon_network.png",
-                                    this));
-  }
-
+  toggles.append(new ParamControl("IsUploadRawEnabled",
+                                 "Upload Raw Logs",
+                                 "Upload full logs and full resolution video by default while on WiFi. If not enabled, individual logs can be marked for upload at my.comma.ai/useradmin.",
+                                 "../assets/offroad/icon_network.png",
+                                 this));
   ParamControl *record_toggle = new ParamControl("RecordFront",
                                                  "Record and Upload Driver Camera",
                                                 "Upload data from the driver facing camera and help improve the driver monitoring algorithm.",
@@ -69,18 +66,19 @@ TogglesPanel::TogglesPanel(QWidget *parent) : QWidget(parent) {
                                    "../assets/offroad/icon_road.png",
                                    this));
 
-  if (Hardware::TICI()) {
-    toggles.append(new ParamControl("EnableWideCamera",
-                                    "Enable use of Wide Angle Camera",
-                                    "Use wide angle camera for driving and ui. Only takes effect after reboot.",
-                                    "../assets/offroad/icon_openpilot.png",
-                                    this));
-    toggles.append(new ParamControl("EnableLteOnroad",
-                                    "Enable LTE while onroad",
-                                    "",
-                                    "../assets/offroad/icon_network.png",
-                                    this));
-  }
+#ifdef QCOM2
+  toggles.append(new ParamControl("EnableWideCamera",
+                                  "Enable use of Wide Angle Camera",
+                                  "Use wide angle camera for driving and ui. Only takes effect after reboot.",
+                                  "../assets/offroad/icon_openpilot.png",
+                                  this));
+  toggles.append(new ParamControl("EnableLteOnroad",
+                                  "Enable LTE while onroad",
+                                  "",
+                                  "../assets/offroad/icon_network.png",
+                                  this));
+
+#endif
 
   bool record_lock = Params().getBool("RecordFrontLock");
   record_toggle->setEnabled(!record_lock);
@@ -114,12 +112,12 @@ DevicePanel::DevicePanel(QWidget* parent) : QWidget(parent) {
                                         "Preview the driver facing camera to help optimize device mounting position for best driver monitoring experience. (vehicle must be off)",
                                         [=]() {
                                            Params().putBool("IsDriverViewEnabled", true);
-                                           QUIState::ui_state.scene.driver_view = true;
+                                           GLWindow::ui_state.scene.driver_view = true;
                                         }, "", this));
 
   QString resetCalibDesc = "openpilot requires the device to be mounted within 4° left or right and within 5° up or down. openpilot is continuously calibrating, resetting is rarely required.";
   ButtonControl *resetCalibBtn = new ButtonControl("Reset Calibration", "RESET", resetCalibDesc, [=]() {
-    if (ConfirmationDialog::confirm("Are you sure you want to reset calibration?", this)) {
+    if (ConfirmationDialog::confirm("Are you sure you want to reset calibration?")) {
       Params().remove("CalibrationParams");
     }
   }, "", this);
@@ -148,15 +146,15 @@ DevicePanel::DevicePanel(QWidget* parent) : QWidget(parent) {
 
   offroad_btns.append(new ButtonControl("Review Training Guide", "REVIEW",
                                         "Review the rules, features, and limitations of openpilot", [=]() {
-    if (ConfirmationDialog::confirm("Are you sure you want to review the training guide?", this)) {
-      Params().remove("CompletedTrainingVersion");
-      emit reviewTrainingGuide();
-    }
-  }, "", this));
+                                          if (ConfirmationDialog::confirm("Are you sure you want to review the training guide?")) {
+                                            Params().remove("CompletedTrainingVersion");
+                                            emit reviewTrainingGuide();
+                                          }
+                                        }, "", this));
 
   QString brand = params.getBool("Passive") ? "dashcam" : "openpilot";
   offroad_btns.append(new ButtonControl("Uninstall " + brand, "UNINSTALL", "", [=]() {
-    if (ConfirmationDialog::confirm("Are you sure you want to uninstall?", this)) {
+    if (ConfirmationDialog::confirm("Are you sure you want to uninstall?")) {
       Params().putBool("DoUninstall", true);
     }
   }, "", this));
@@ -174,7 +172,7 @@ DevicePanel::DevicePanel(QWidget* parent) : QWidget(parent) {
   QPushButton *reboot_btn = new QPushButton("Reboot");
   power_layout->addWidget(reboot_btn);
   QObject::connect(reboot_btn, &QPushButton::released, [=]() {
-    if (ConfirmationDialog::confirm("Are you sure you want to reboot?", this)) {
+    if (ConfirmationDialog::confirm("Are you sure you want to reboot?")) {
       Hardware::reboot();
     }
   });
@@ -183,7 +181,7 @@ DevicePanel::DevicePanel(QWidget* parent) : QWidget(parent) {
   poweroff_btn->setStyleSheet("background-color: #E22C2C;");
   power_layout->addWidget(poweroff_btn);
   QObject::connect(poweroff_btn, &QPushButton::released, [=]() {
-    if (ConfirmationDialog::confirm("Are you sure you want to power off?", this)) {
+    if (ConfirmationDialog::confirm("Are you sure you want to power off?")) {
       Hardware::poweroff();
     }
   });
@@ -262,13 +260,7 @@ QWidget * network_panel(QWidget * parent) {
   return w;
 }
 
-void SettingsWindow::showEvent(QShowEvent *event) {
-  if (layout()) {
-    panel_widget->setCurrentIndex(0);
-    nav_btns->buttons()[0]->setChecked(true);
-    return;
-  }
-
+SettingsWindow::SettingsWindow(QWidget *parent) : QFrame(parent) {
   // setup two main layouts
   QVBoxLayout *sidebar_layout = new QVBoxLayout();
   sidebar_layout->setMargin(0);
@@ -290,11 +282,11 @@ void SettingsWindow::showEvent(QShowEvent *event) {
   close_btn->setFixedSize(200, 200);
   sidebar_layout->addSpacing(45);
   sidebar_layout->addWidget(close_btn, 0, Qt::AlignCenter);
-  QObject::connect(close_btn, &QPushButton::released, this, &SettingsWindow::closeSettings);
+  QObject::connect(close_btn, SIGNAL(released()), this, SIGNAL(closeSettings()));
 
   // setup panels
   DevicePanel *device = new DevicePanel(this);
-  QObject::connect(device, &DevicePanel::reviewTrainingGuide, this, &SettingsWindow::reviewTrainingGuide);
+  QObject::connect(device, SIGNAL(reviewTrainingGuide()), this, SIGNAL(reviewTrainingGuide()));
 
   QPair<QString, QWidget *> panels[] = {
     {"Device", device},
@@ -362,12 +354,10 @@ void SettingsWindow::hideEvent(QHideEvent *event){
 #ifdef QCOM
   HardwareEon::close_activities();
 #endif
-
-  // TODO: this should be handled by the Dialog classes
-  QList<QWidget*> children = findChildren<QWidget *>();
-  for(auto &w : children){
-    if(w->metaObject()->superClass()->className() == QString("QDialog")){
-      w->close();
-    }
-  }
 }
+
+void SettingsWindow::showEvent(QShowEvent *event){
+  panel_widget->setCurrentIndex(0);
+  nav_btns->buttons()[0]->setChecked(true);
+}
+
